@@ -44,19 +44,3 @@ class LightNN(nn.Module):
         return x
 
 
-class ModifiedLightNN(LightNN):
-    """Modified lightweight neural network that returns intermediate features."""
-    
-    def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
-        """Forward pass returning both output and features.
-        
-        Args:
-            x: Input tensor
-            
-        Returns:
-            Tuple of (output tensor, feature tensor)
-        """
-        x = self.features(x)
-        features = torch.flatten(x, 1)
-        output = self.classifier(features)
-        return output, features 

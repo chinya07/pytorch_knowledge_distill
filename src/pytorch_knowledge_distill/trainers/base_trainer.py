@@ -87,7 +87,8 @@ class BaseTrainer:
             
             self.optimizer.zero_grad()
             outputs = self.model(inputs)
-            loss = self.criterion(outputs, labels)
+            logits = outputs[0] if isinstance(outputs, tuple) else outputs
+            loss = self.criterion(logits, labels)
             loss.backward()
             self.optimizer.step()
             
@@ -111,7 +112,8 @@ class BaseTrainer:
                 labels = labels.to(self.device)
                 
                 outputs = self.model(inputs)
-                _, predicted = torch.max(outputs.data, 1)
+                logits = outputs[0] if isinstance(outputs, tuple) else outputs
+                _, predicted = torch.max(logits.data, 1)
                 
                 total += labels.size(0)
                 correct += (predicted == labels).sum().item()
