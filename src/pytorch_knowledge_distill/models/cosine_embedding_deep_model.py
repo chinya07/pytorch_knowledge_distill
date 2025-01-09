@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 
 
-class DeepNN(nn.Module):
+class CosineEmbeddingDeepNN(nn.Module):
     """Deep neural network implementation to be used as teacher."""
     
     def __init__(self, num_classes: int = 10) -> None:
@@ -34,18 +34,10 @@ class DeepNN(nn.Module):
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """Forward pass of the model.
-        
-        Args:
-            x: Input tensor
-            
-        Returns:
-            Model output tensor
-        """
+        """Forward pass of the model."""
         x = self.features(x)
-        features = x
-        x = torch.flatten(x, 1)
-        x = self.classifier(x)
-        return x, features
-
+        flattened_conv_output = torch.flatten(x, 1)
+        x = self.classifier(flattened_conv_output)
+        flattened_conv_output_after_pooling = torch.nn.functional.avg_pool1d(flattened_conv_output, 2)
+        return x, flattened_conv_output_after_pooling
 

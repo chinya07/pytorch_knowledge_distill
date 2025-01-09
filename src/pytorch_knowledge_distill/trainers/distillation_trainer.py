@@ -39,7 +39,10 @@ class DistillationTrainer(BaseTrainer):
         super().__init__(student_model, train_loader, test_loader, learning_rate, device)
         self.teacher_model = teacher_model
         self.teacher_model.to(self.device)
-        self.teacher_model.eval()
+        self.student_model = student_model
+        self.student_model.to(self.device)
+        self.learning_rate = learning_rate
+        self.device = device or torch.device("cuda" if torch.cuda.is_available() else "cpu")
         
         self.temperature = temperature
         self.alpha = alpha
@@ -50,21 +53,27 @@ class DistillationTrainer(BaseTrainer):
         Returns:
             Average loss for the epoch
         """
-        self.model.train()
+        self.teacher_model.eval()
+        self.student_model.train()
         running_loss = 0.0
         
         for inputs, labels in self.train_loader:
             inputs = inputs.to(self.device)
             labels = labels.to(self.device)
             
-            # Get soft targets from teacher
-            with torch.no_grad():
-                teacher_outputs = self.teacher_model(inputs)
-                soft_targets = F.softmax(teacher_outputs / self.temperature, dim=1)
-            
             # Student forward pass
             self.optimizer.zero_grad()
-            student_outputs = self.model(inputs)
+
+            # Get soft targets from teacher
+            with torch.no_grad():
+                
+                teacher_outputs = self.teacher_model(inputs)
+                teacher_outputs = teacher_outputs[0] if isinstance(teacher_outputs, tuple) else teacher_outputs
+                soft_targets = F.softmax(teacher_outputs / self.temperature, dim=1)
+            
+
+            student_outputs = self.student_model(inputs)
+            student_outputs = student_outputs[0] if isinstance(student_outputs, tuple) else student_outputs
             
             # Calculate soft and hard losses
             soft_loss = F.kl_div(

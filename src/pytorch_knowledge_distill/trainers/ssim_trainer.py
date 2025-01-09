@@ -81,14 +81,20 @@ class SSIMDistillationTrainer(BaseTrainer):
             inputs = inputs.to(self.device)
             labels = labels.to(self.device)
             
+            self.optimizer.zero_grad()
+
             # Get teacher features
             with torch.no_grad():
                 teacher_outputs, teacher_features = self.teacher_model(inputs)
             
             # Student forward pass
-            self.optimizer.zero_grad()
-            student_outputs, student_features = self.model(inputs)
+            # 1x1 Convolution to match channels
+
             
+            student_outputs, student_features = self.model(inputs)
+            adaptation_layer = nn.Conv2d(in_channels=student_features.shape[1], out_channels=teacher_features.shape[1], kernel_size=1)
+            student_features = adaptation_layer(student_features)
+                        
             # Calculate classification and SSIM feature matching losses
             cls_loss = self.criterion(student_outputs, labels)
             ssim_loss = self.compute_ssim_loss(student_features, teacher_features)

@@ -39,8 +39,9 @@ class LightNN(nn.Module):
             Model output tensor
         """
         x = self.features(x)
+        features = x
         x = torch.flatten(x, 1)
         x = self.classifier(x)
-        return x
+        return x, features
 
 

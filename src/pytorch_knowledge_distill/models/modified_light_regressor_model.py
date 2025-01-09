@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 
 
-class ModifiedLightNN(nn.Module):
+class ModifiedLightRegressorNN(nn.Module):
     """Lightweight neural network implementation to be used as student."""
     
     def __init__(self, num_classes: int = 10) -> None:
@@ -22,6 +22,11 @@ class ModifiedLightNN(nn.Module):
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=2, stride=2),
         )
+
+        self.regressor = nn.Sequential(
+            nn.Conv2d(16, 32, kernel_size=3, padding=1)
+        )
+
         self.classifier = nn.Sequential(
             nn.Linear(1024, 256),
             nn.ReLU(),
@@ -39,7 +44,8 @@ class ModifiedLightNN(nn.Module):
             Model output tensor
         """
         x = self.features(x)
-        flattened_conv_output = torch.flatten(x, 1)
-        x = self.classifier(flattened_conv_output)
-        return x, flattened_conv_output
+        regressor_output = self.regressor(x)
+        x = torch.flatten(x, 1)
+        x = self.classifier(x)
+        return x, regressor_output
 

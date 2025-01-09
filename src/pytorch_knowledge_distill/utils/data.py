@@ -6,7 +6,7 @@ import torch
 import torchvision
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
-
+from .Image_augmentation_from_DIST_paper import RandomErasing, ColorJitter
 
 def get_cifar10_loaders(
     batch_size: int = 128,
@@ -26,7 +26,9 @@ def get_cifar10_loaders(
     transform_train = transforms.Compose([
         transforms.RandomCrop(32, padding=4),
         transforms.RandomHorizontalFlip(),
+        ColorJitter(brightness=0.4, contrast=0.4, saturation=0.4, hue=0.1),  # Color Jitter
         transforms.ToTensor(),
+        RandomErasing(p=0.5, scale=(0.02, 0.33), ratio=(0.3, 3.3), value="random"),  # Random Erasing
         transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
     ])
 

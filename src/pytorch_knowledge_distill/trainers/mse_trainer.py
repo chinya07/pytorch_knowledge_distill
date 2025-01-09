@@ -18,7 +18,8 @@ class MSEDistillationTrainer(BaseTrainer):
         teacher_model: nn.Module,
         train_loader: DataLoader,
         test_loader: DataLoader,
-        feature_weight: float = 0.1,
+        ce_loss_weight: float = 0.1,
+        feature_map_weight: float = 0.1,
         learning_rate: float = 0.001,
         device: Optional[torch.device] = None
     ) -> None:
@@ -36,10 +37,17 @@ class MSEDistillationTrainer(BaseTrainer):
         super().__init__(student_model, train_loader, test_loader, learning_rate, device)
         self.teacher_model = teacher_model
         self.teacher_model.to(self.device)
-        self.teacher_model.eval()
+        self.student_model = student_model
+        self.student_model.to(self.device)
+        self.learning_rate = learning_rate
+        self.device = device or torch.device("cuda" if torch.cuda.is_available() else "cpu")
         
-        self.feature_weight = feature_weight
+        self.ce_loss = nn.CrossEntropyLoss()
         self.mse_loss = nn.MSELoss()
+        self.optimizer = torch.optim.Adam(self.student_model.parameters(), lr=learning_rate)    
+
+        self.ce_loss_weight = ce_loss_weight
+        self.feature_map_weight = feature_map_weight
 
     def train_epoch(self) -> float:
         """Train for one epoch using MSE feature distillation.
@@ -47,27 +55,32 @@ class MSEDistillationTrainer(BaseTrainer):
         Returns:
             Average loss for the epoch
         """
-        self.model.train()
+        self.teacher_model.eval()
+        self.student_model.train()
         running_loss = 0.0
         
         for inputs, labels in self.train_loader:
             inputs = inputs.to(self.device)
             labels = labels.to(self.device)
             
-            # Get teacher features
-            with torch.no_grad():
-                teacher_outputs, teacher_features = self.teacher_model(inputs)
-            
+    
             # Student forward pass
             self.optimizer.zero_grad()
-            student_outputs, student_features = self.model(inputs)
+
+            with torch.no_grad():
+                _, teacher_feature_map = self.teacher_model(inputs)
+
+            student_logits, regressor_feature_map = self.student_model(inputs)
             
+            # Calculate the loss
+            hidden_rep_loss = self.mse_loss(regressor_feature_map, teacher_feature_map)
+
             # Calculate classification and feature matching losses
-            cls_loss = self.criterion(student_outputs, labels)
-            feature_loss = self.mse_loss(student_features, teacher_features)
+            label_loss = self.ce_loss(student_logits, labels)
+        
             
             # Combined loss
-            loss = cls_loss + self.feature_weight * feature_loss
+            loss = self.feature_map_weight * hidden_rep_loss + self.ce_loss_weight * label_loss
             
             loss.backward()
             self.optimizer.step()

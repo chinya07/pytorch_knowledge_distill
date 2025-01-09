@@ -1,11 +1,11 @@
-"""Deep neural network model implementation."""
+"""Deep neural network model with regressor implementation."""
 
 import torch
 import torch.nn as nn
 
 
-class ModifiedDeepNN(nn.Module):
-    """Deep neural network implementation to be used as teacher."""
+class ModifiedDeepRegressorNN(nn.Module):
+    """Deep neural network with regressor implementation to be used as teacher."""
     
     def __init__(self, num_classes: int = 10) -> None:
         """Initialize the deep neural network.
@@ -36,8 +36,8 @@ class ModifiedDeepNN(nn.Module):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward pass of the model."""
         x = self.features(x)
-        flattened_conv_output = torch.flatten(x, 1)
-        x = self.classifier(flattened_conv_output)
-        flattened_conv_output_after_pooling = torch.nn.functional.avg_pool1d(flattened_conv_output, 2)
-        return x, flattened_conv_output_after_pooling
+        conv_feature_map = x
+        x = torch.flatten(x, 1)
+        x = self.classifier(x)
+        return x, conv_feature_map
 
